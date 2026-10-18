@@ -1,6 +1,4 @@
 """Regression tests for the mandatory scene-review gate."""
-from pathlib import Path
-
 import pytest
 
 from core.config import AppConfig
@@ -17,18 +15,32 @@ def test_pipeline_pauses_for_scene_approval_by_default(tmp_path, monkeypatch):
     (tmp_path / "temp").mkdir(parents=True, exist_ok=True)
 
     pipeline = ShortsPipeline()
+    voiceover = (
+        "Today we examine a small test subject in its environment, observe its movement, "
+        "and explain why this simple example matters for our visual approval workflow."
+    )
     script = ShortsScript(
         topic="Test topic",
         title="A Test Topic 🎬",
         hook="Here is the hook.",
-        voiceover_text="A short test narration for a pending scene.",
+        voiceover_text=voiceover,
         description="Test description.",
         visual_segments=[
             VisualSegment(
                 order=1,
-                search_query="test subject",
-                scene_description="A test subject in a clear scene.",
-            )
+                search_query="test subject overview",
+                scene_description="Introduce the test subject in its environment.",
+            ),
+            VisualSegment(
+                order=2,
+                search_query="test subject movement",
+                scene_description="Show the test subject moving through the environment.",
+            ),
+            VisualSegment(
+                order=3,
+                search_query="test subject closeup",
+                scene_description="End with a clear close-up of the test subject.",
+            ),
         ],
     )
     monkeypatch.setattr(pipeline.script_generator, "generate", lambda **kwargs: script)
@@ -40,25 +52,43 @@ def test_pipeline_pauses_for_scene_approval_by_default(tmp_path, monkeypatch):
         "generate_voiceover",
         lambda **kwargs: AudioResult(
             audio_path=str(audio_path),
-            duration_seconds=3.0,
+            duration_seconds=9.0,
             words_timing=[],
         ),
     )
 
     plan = TimestampedScenePlan(
         topic="Test topic",
-        total_scenes=1,
-        total_duration=3.0,
+        total_scenes=3,
+        total_duration=9.0,
         scenes=[
             ScenePlanItem(
                 scene_order=1,
-                narration_segment="A short test narration for a pending scene.",
+                narration_segment="Introduce the test subject in its environment.",
                 start_time=0.0,
                 end_time=3.0,
                 duration=3.0,
                 main_subject="Test subject",
-                action="Show the test subject",
-            )
+                action="Introduce the subject",
+            ),
+            ScenePlanItem(
+                scene_order=2,
+                narration_segment="Observe its movement through the environment.",
+                start_time=3.0,
+                end_time=6.0,
+                duration=3.0,
+                main_subject="Test subject",
+                action="Show the subject moving",
+            ),
+            ScenePlanItem(
+                scene_order=3,
+                narration_segment="Explain why the example matters for visual approval.",
+                start_time=6.0,
+                end_time=9.0,
+                duration=3.0,
+                main_subject="Test subject",
+                action="End on a clear close-up",
+            ),
         ],
     )
     monkeypatch.setattr(
@@ -85,7 +115,6 @@ def test_pipeline_pauses_for_scene_approval_by_default(tmp_path, monkeypatch):
     assert job.status == "AWAITING_APPROVAL"
     assert job.scene_plan_data["scenes"][0]["approval_status"] == "PENDING"
     assert job.audio_path == str(audio_path)
-
 
 
 def test_ai_visual_cache_key_changes_when_scene_direction_changes():
