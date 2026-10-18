@@ -25,5 +25,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt pytest
       - name: Run offline regression tests
+        env:
+          PYTHONPATH: .
         run: |
-          pytest -q tests/test_pipeline_approval_default.py tests/test_scene_approval_engine.py -k "not full_pipeline_render_approved_job"
+          python -m pytest -q tests/test_pipeline_approval_default.py tests/test_scene_approval_engine.py -k "not full_pipeline_render_approved_job"
