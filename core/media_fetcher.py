@@ -1,6 +1,7 @@
 import os
 import sys
 import re
+import hashlib
 import time
 import requests
 import subprocess
@@ -302,6 +303,26 @@ class MediaFetcher:
 
         return None, rejections
 
+    @staticmethod
+    def _scene_visual_cache_key(topic: str, scene: ScenePlanItem) -> str:
+        """Return a stable cache key that changes whenever scene direction changes."""
+        fingerprint = "\\n".join([
+            topic,
+            scene.main_subject,
+            scene.action,
+            scene.visual_description,
+            scene.historical_period or "",
+            scene.setting or "",
+            scene.shot_type or "",
+            scene.camera_movement or "",
+            scene.camera_angle or "",
+            scene.positive_prompt or "",
+            scene.negative_prompt or "",
+            "|".join(scene.required_objects),
+            "|".join(scene.negative_constraints),
+        ])
+        return hashlib.sha256(fingerprint.encode("utf-8")).hexdigest()[:12]
+
     def _try_generate_ai_validated(
         self,
         topic: str,
@@ -310,9 +331,11 @@ class MediaFetcher:
     ) -> Tuple[Optional[DownloadedClip], List[AssetRejectionRecord]]:
         """Generates authentic AI image matching scene prompt and validates."""
         rejections: List[AssetRejectionRecord] = []
-        safe_q = re.sub(r"[^a-zA-Z0-9]+", "_", f"{scene.scene_order}_{scene.main_subject}")[:30].strip("_")
-        img_path = self.output_dir / f"ai_img_{safe_q}.jpg"
-        vid_path = self.output_dir / f"ai_clip_{safe_q}.mp4"
+        safe_q = re.sub(r"[^a-zA-Z0-9]+", "_", f"{scene.scene_order}_{scene.main_subject}")[:24].strip("_")
+        visual_key = self._scene_visual_cache_key(topic, scene)
+        cache_name = f"{safe_q}_{visual_key}"
+        img_path = self.output_dir / f"ai_img_{cache_name}.jpg"
+        vid_path = self.output_dir / f"ai_clip_{cache_name}.mp4"
 
         # Check if already rendered and valid
         if vid_path.exists() and vid_path.stat().st_size > 50_000:
@@ -330,12 +353,21 @@ class MediaFetcher:
                 validation_confidence=0.95
             ), rejections
 
-        # Craft prompt
-        prompt = (
-            f"photorealistic 8k vertical portrait of {scene.visual_description}, "
-            f"period: {scene.historical_period or 'cinematic history'}, "
-            f"dramatic studio lighting, 35mm lens, depth of field, 9:16 aspect ratio"
-        )[:260]
+        # Build the prompt from the full scene direction instead of truncating it
+        # before the action, lighting, and camera instructions can be considered.
+        prompt_parts = [
+            f"Photorealistic cinematic vertical 9:16 image about {topic}.",
+            f"Main subject: {scene.main_subject}.",
+            f"Scene description: {scene.visual_description}.",
+            f"Action: {scene.action}.",
+            f"Period and setting: {scene.historical_period or scene.setting or 'appropriate to the topic'}.",
+            f"Shot: {scene.shot_type}; camera: {scene.camera_movement}; angle: {scene.camera_angle}.",
+            f"Required visible objects: {', '.join(scene.required_objects[:8])}.",
+            f"Visual style and lighting: {scene.visual_style}; {scene.lighting_atmosphere}.",
+            f"Exclude: {', '.join(scene.negative_constraints[:10])}.",
+            "No captions, logos, watermarks, or unrelated subjects; clear focal subject, natural materials, coherent composition.",
+        ]
+        prompt = " ".join(part for part in prompt_parts if part and part.strip())
 
         # 1. Try FLUX.1-schnell
         has_img = AIVisualGenerator._fetch_flux_image(prompt, img_path, seed=scene.scene_order * 113 + 42)
