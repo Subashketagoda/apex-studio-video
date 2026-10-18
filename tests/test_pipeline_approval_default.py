@@ -85,3 +85,25 @@ def test_pipeline_pauses_for_scene_approval_by_default(tmp_path, monkeypatch):
     assert job.status == "AWAITING_APPROVAL"
     assert job.scene_plan_data["scenes"][0]["approval_status"] == "PENDING"
     assert job.audio_path == str(audio_path)
+
+
+
+def test_ai_visual_cache_key_changes_when_scene_direction_changes():
+    """Edited prompts/actions must not silently reuse a previously generated clip."""
+    from core.media_fetcher import MediaFetcher
+
+    scene = ScenePlanItem(
+        scene_order=1,
+        narration_segment="A test scene.",
+        start_time=0.0,
+        end_time=3.0,
+        duration=3.0,
+        main_subject="Test subject",
+        action="Show the subject from the front",
+        visual_description="A clear cinematic portrait of the subject",
+        required_objects=["test object"],
+    )
+    original_key = MediaFetcher._scene_visual_cache_key("Test topic", scene)
+    scene.action = "Show the subject from a high angle"
+    changed_key = MediaFetcher._scene_visual_cache_key("Test topic", scene)
+    assert original_key != changed_key
