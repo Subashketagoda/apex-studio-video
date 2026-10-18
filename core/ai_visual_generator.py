@@ -238,7 +238,32 @@ class AIVisualGenerator:
         except Exception:
             pass
 
-        full_filter = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,format=yuv420p"
+        # Add actual per-frame camera motion. Previously this was only a static
+        # scale/crop despite being labelled as a Ken-Burns render.
+        motion = (camera_motion or "").lower()
+        center_x = "iw/2-(iw/zoom/2)"
+        center_y = "ih/2-(ih/zoom/2)"
+        if any(term in motion for term in ("pull-back", "pull back", "zoom out", "pullback")):
+            zoom_expr = "max(1.0,1.12-on*0.00013)"
+            x_expr, y_expr = center_x, center_y
+        elif any(term in motion for term in ("tracking right", "pan right", "orbit")):
+            zoom_expr = "1.10"
+            x_expr = "min(iw-iw/zoom,on*0.15)"
+            y_expr = center_y
+        elif any(term in motion for term in ("tilt down", "pan down", "tilt-down")):
+            zoom_expr = "1.10"
+            x_expr = center_x
+            y_expr = "min(ih-ih/zoom,on*0.25)"
+        else:
+            zoom_expr = "min(zoom+0.0012,1.12)"
+            x_expr, y_expr = center_x, center_y
+
+        full_filter = (
+            "scale=1080:1920:force_original_aspect_ratio=increase,"
+            "crop=1080:1920,"
+            f"zoompan=z='{zoom_expr}':x='{x_expr}':y='{y_expr}':"
+            "d=1:s=1080x1920:fps=30,format=yuv420p"
+        )
 
         cmd = [
             "ffmpeg", "-y",
