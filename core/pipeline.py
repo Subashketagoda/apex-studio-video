@@ -150,22 +150,47 @@ class ShortsPipeline:
                     scene_plan.scenes[i].selected_asset_source = clip.source_tier
                     scene_plan.scenes[i].generation_status = "GENERATED"
 
-            # Check human approval gate
-            auto_approve = kwargs.get("auto_approve_scenes", True)
+            # Human review is the safe default. Auto-approval must be explicitly
+            # enabled by trusted callers (for example, isolated integration tests).
+            auto_approve = kwargs.get("auto_approve_scenes", False) is True
             if auto_approve:
                 for sc in scene_plan.scenes:
                     sc.approval_status = "APPROVED"
                 scene_plan.all_approved = True
                 JobManager.update_job(job_id, scene_plan_data=scene_plan.model_dump())
             else:
-                JobManager.update_job(job_id, scene_plan_data=scene_plan.model_dump())
-                all_app, unapproved = JobManager.are_all_scenes_approved(job_id)
-                if not all_app:
-                    unapproved_str = ", ".join(f"Scene #{o}" for o in unapproved)
-                    err = f"Rendering BLOCKED: The following scenes have not been approved by the user: {unapproved_str}. Approve all scenes in Scene Review Studio before rendering."
-                    print(f"[ShortsPipeline] 🛑 {err}", flush=True)
-                    JobManager.update_job(job_id, status="AWAITING_APPROVAL", stage="Awaiting Human Scene Approval", log_msg=err)
-                    raise RuntimeError(err)
+                # Persist all review inputs before returning control to the UI.
+                # Do not raise here: the generic exception handler would mark this
+                # expected approval pause as FAILED and hide the reviewable job.
+                pending_orders = [
+                    sc.scene_order for sc in scene_plan.scenes
+                    if sc.approval_status != "APPROVED"
+                ]
+                pending_text = ", ".join(f"Scene #{order}" for order in pending_orders) or "none"
+                message = (
+                    "Scene assets are ready for human review. Final rendering is "
+                    f"paused until every scene is approved. Pending: {pending_text}."
+                )
+                JobManager.update_job(
+                    job_id,
+                    status="AWAITING_APPROVAL",
+                    progress=0.65,
+                    stage="Awaiting Human Scene Approval",
+                    scene_plan_data=scene_plan.model_dump(),
+                    log_msg=message,
+                )
+                return PipelineResult(
+                    job_id=job_id,
+                    topic=topic,
+                    script=script,
+                    scene_plan=scene_plan,
+                    audio_path=audio_result.audio_path,
+                    audio_duration=audio_result.duration_seconds,
+                    clips_downloaded=len(downloaded_clips),
+                    final_video_path="",
+                    validation_report=None,
+                    qc_report=None,
+                )
 
             scene_durations = [sc.duration for sc in scene_plan.scenes]
 

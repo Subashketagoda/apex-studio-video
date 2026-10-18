@@ -274,7 +274,13 @@ with tab_oneclick:
                     visual_source=selected_visual_mode
                 )
                 st.session_state.oneclick_result = res
-                st.success("🎉 Video successfully produced, burned, and validated!")
+                if res.final_video_path:
+                    st.success("🎉 Video successfully produced, burned, and validated!")
+                else:
+                    st.info(
+                        f"🎬 Scenes are ready for review. Job ID: {res.job_id}. "
+                        "Open the Scene Review Studio tab, inspect each scene, and approve all scenes before final rendering."
+                    )
             except Exception as e:
                 st.error(f"Render encountered error: {e}")
 
@@ -287,11 +293,14 @@ with tab_oneclick:
         c_left, c_right = st.columns([1.2, 1.8])
         with c_left:
             st.markdown("#### 📱 Video Preview (1080x1920)")
-            if Path(res.final_video_path).exists():
+            if res.final_video_path and Path(res.final_video_path).is_file():
                 st.video(res.final_video_path)
                 st.caption(f"📁 Path: `{res.final_video_path}`")
             else:
-                st.warning("Video file not found on disk.")
+                st.info(
+                    f"Final rendering has not started. Review and approve this job's scenes in Scene Review Studio. "
+                    f"Job ID: `{res.job_id}`"
+                )
 
         with c_right:
             st.markdown("#### 📝 Script & Verified Facts")

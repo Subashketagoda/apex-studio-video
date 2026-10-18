@@ -29,6 +29,7 @@ def test_topic(pipeline: ShortsPipeline, topic: str, tone: str) -> PipelineResul
         tone=tone,
         duration_pref="⚡ Fast (~30s - 35s)",
         visual_source="auto",
+        auto_approve_scenes=True,
         bgm_track="cinematic_drone",
         bgm_volume=0.18,
         enable_hook_sfx=True,

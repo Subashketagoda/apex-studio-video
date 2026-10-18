@@ -119,7 +119,8 @@ class TestApexGenPipeline(unittest.TestCase):
             duration_pref="Fast (~30s)",
             bgm_track="cinematic_drone",
             bgm_volume=0.10,
-            subtitle_style="mrbeast"
+            subtitle_style="mrbeast",
+            auto_approve_scenes=True
         )
 
         self.assertIsInstance(result, PipelineResult)
