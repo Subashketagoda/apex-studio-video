@@ -1,0 +1,29 @@
+# Core & Configuration
+pydantic>=2.7.0
+python-dotenv>=1.0.1
+
+# LLM Providers
+google-genai>=0.1.1
+google-generativeai>=0.8.3
+openai>=1.30.0
+
+# Voiceover & Audio
+edge-tts>=6.1.12
+elevenlabs>=1.0.0
+mutagen>=1.47.0
+
+# Media & Visuals
+requests>=2.32.0
+pillow>=10.0.0
+
+# Video Editing & Subtitles
+moviepy>=2.0.0
+faster-whisper>=1.0.0
+
+# Publishing
+google-api-python-client>=2.130.0
+google-auth-oauthlib>=1.2.0
+google-auth-httplib2>=0.2.0
+
+# Local Web UI
+streamlit>=1.36.0
