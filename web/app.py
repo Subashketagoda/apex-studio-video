@@ -11,7 +11,7 @@ if str(ROOT_DIR) not in sys.path:
 
 import streamlit as st
 from core.config import AppConfig
-from core.schemas import ShortsScript, VisualSegment, FactualClaim
+from core.schemas import ShortsScript, VisualSegment, FactualClaim, ScenePlanItem, TimestampedScenePlan
 from core.script_generator import ScriptGenerator
 from core.tts_engine import TTSEngine, AudioResult
 from core.media_fetcher import MediaFetcher
@@ -21,7 +21,7 @@ from core.pipeline import ShortsPipeline, PipelineResult
 from core.job_manager import JobManager, JobRecord
 from core.researcher import ResearchService
 from core.video_providers import HardwareDetector, AIVideoEngine
-from core.schemas import ScenePlanItem
+
 
 
 # Page Setup

@@ -20,17 +20,16 @@ def test_pipeline_pauses_for_scene_approval_by_default(tmp_path, monkeypatch):
     script = ShortsScript(
         topic="Test topic",
         title="A Test Topic 🎬",
-        hook="Here is the hook.",
-        voiceover_text="A short test narration for a pending scene.",
+        hook="Here is the opening insight that stops the scroll.",
+        voiceover_text="A short test narration for a pending scene that includes enough words to satisfy twenty words minimum for the validation rule.",
         description="Test description.",
         visual_segments=[
-            VisualSegment(
-                order=1,
-                search_query="test subject",
-                scene_description="A test subject in a clear scene.",
-            )
+            VisualSegment(order=1, search_query="test subject one", scene_description="A test subject in a clear scene."),
+            VisualSegment(order=2, search_query="test subject two", scene_description="A second test subject in a clear scene."),
+            VisualSegment(order=3, search_query="test subject three", scene_description="A third test subject in a clear scene.")
         ],
     )
+
     monkeypatch.setattr(pipeline.script_generator, "generate", lambda **kwargs: script)
 
     audio_path = tmp_path / "voiceover.mp3"
