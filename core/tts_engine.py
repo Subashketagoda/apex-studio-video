@@ -96,6 +96,7 @@ class EdgeTTSProvider(TTSProvider):
         )
 
         words_timing: List[WordTiming] = []
+        sentence_timings: List[WordTiming] = []
         with open(output_path, "wb") as f:
             async for chunk in communicate.stream():
                 if chunk["type"] == "audio":
@@ -120,7 +121,7 @@ class EdgeTTSProvider(TTSProvider):
                     if s_words and sent_dur > 0:
                         w_step = sent_dur / len(s_words)
                         for idx, sw in enumerate(s_words):
-                            words_timing.append(
+                            sentence_timings.append(
                                 WordTiming(
                                     word=sw,
                                     start=round(sent_offset + (idx * w_step), 2),
@@ -130,6 +131,11 @@ class EdgeTTSProvider(TTSProvider):
 
         audio = MP3(str(output_path.resolve()))
         duration = float(audio.info.length)
+
+        # Prefer precise WordBoundary events. SentenceBoundary events are a
+        # fallback only; appending both streams duplicates every caption word.
+        if not words_timing and sentence_timings:
+            words_timing = sentence_timings
 
         # Ensure words_timing is populated if boundary events were sparse
         if not words_timing:
