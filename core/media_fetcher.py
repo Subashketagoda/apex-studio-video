@@ -309,6 +309,7 @@ class MediaFetcher:
         fingerprint = "\\n".join([
             topic,
             scene.main_subject,
+            str(scene.duration),
             scene.action,
             scene.visual_description,
             scene.historical_period or "",
