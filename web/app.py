@@ -598,9 +598,17 @@ with tab_batch:
                             subtitle_style=selected_sub_style,
                             visual_source=selected_visual_mode
                         )
-                        b_status.success(f"✅ Rendered in {res.audio_duration:.1f}s: `{Path(res.final_video_path).name}`")
-                        if Path(res.final_video_path).exists():
+                        if res.final_video_path and Path(res.final_video_path).is_file():
+                            b_status.success(
+                                f"✅ Rendered in {res.audio_duration:.1f}s: "
+                                f"`{Path(res.final_video_path).name}`"
+                            )
                             st.video(res.final_video_path)
+                        else:
+                            b_status.info(
+                                f"🎬 Scenes ready for review. Job ID: {res.job_id}. "
+                                "Approve every scene in Scene Review Studio before final rendering."
+                            )
                     except Exception as e:
                         b_status.error(f"Failed: {e}")
 
